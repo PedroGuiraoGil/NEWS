@@ -37,8 +37,8 @@
 
     const feedsPorCategoria = {
       internacional: [
-        "https://feeds.bbci.co.uk/news/world/rss.xml",
         "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+        "https://feeds.bbci.co.uk/news/world/rss.xml",
         "https://www.theguardian.com/world/rss",
         "https://elpais.com/rss/elpais/internacional.xml"
       ],
@@ -47,7 +47,7 @@
         "https://feeds.elconfidencial.com/espana/rss.xml"
       ],
       europa: [
-        "https://www.dw.com/es/europa/rss-feeds/s-100838",
+        "https://feeds.elconfidencial.com/mundo/rss.xml",
         "https://elpais.com/rss/elpais/internacional.xml"
       ],
       deportes: [
@@ -79,19 +79,17 @@
         const parser = new DOMParser();
         const xml = parser.parseFromString(data.contents, "text/xml");
         const items = xml.querySelectorAll("item");
-        return Array.from(items).slice(0, 6).map(item => {
+
+        return Array.from(items).map(item => {
           const content = item.querySelector("content\\:encoded")?.textContent || item.querySelector("description")?.textContent || "";
           const imgMatch = content.match(/<img[^>]+src\s*=\s*['"]([^'"]+)['"]/);
-          const image = item.querySelector("media\\:content")?.getAttribute("url") ||
-                        item.querySelector("media\\:thumbnail")?.getAttribute("url") ||
-                        item.querySelector("enclosure")?.getAttribute("url") ||
-                        (imgMatch ? imgMatch[1] : "https://via.placeholder.com/300x150");
+          const image = imgMatch ? imgMatch[1] : "https://via.placeholder.com/300x150";
 
           return {
-            title: item.querySelector("title")?.textContent,
-            link: item.querySelector("link")?.textContent,
-            description: content.replace(/<[^>]+>/g, '').substring(0, 1000),
-            image: image
+            title: item.querySelector("title")?.textContent || "(Sin título)",
+            link: item.querySelector("link")?.textContent || "#",
+            description: content.replace(/<[^>]+>/g, '').substring(0, 1500),
+            image
           };
         });
       } catch (error) {
@@ -131,6 +129,11 @@
       for (const feed of feeds) {
         const articles = await getFeedArticles(feed);
         allArticles = allArticles.concat(articles);
+      }
+
+      if (allArticles.length === 0) {
+        container.innerHTML = "<p>No se pudieron cargar noticias.</p>";
+        return;
       }
 
       const topArticles = allArticles.slice(0, 12);
