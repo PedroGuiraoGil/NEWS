@@ -9,11 +9,25 @@
     body { background-color: #f1f1f1; }
     .header { background-color: #111; color: white; padding: 1rem; text-align: center; font-size: 1.5rem; font-weight: bold; }
     .card { margin: 1rem; }
+    .category-select { margin: 1rem auto; max-width: 400px; }
   </style>
 </head>
 <body>
   <div class="header">Resumen de Noticias con IA (Mistral)</div>
+
   <div class="container">
+    <div class="category-select">
+      <select id="category" class="form-select">
+        <option value="internacional">Internacional</option>
+        <option value="nacional">Nacional</option>
+        <option value="europa">Europa</option>
+        <option value="deportes">Deportes</option>
+        <option value="cultura">Cultura</option>
+        <option value="tecnologia">Tecnología</option>
+        <option value="ciencia">Ciencia</option>
+        <option value="economia">Economía</option>
+      </select>
+    </div>
     <div id="news-container" class="row justify-content-center"></div>
   </div>
 
@@ -21,12 +35,42 @@
     const token = "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";
     const mistralModel = "mistralai/Mistral-7B-Instruct-v0.2";
 
-    const feeds = [
-      "https://feeds.bbci.co.uk/news/world/rss.xml",
-      "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-      "https://www.theguardian.com/world/rss",
-      "https://elpais.com/rss/elpais/internacional.xml"
-    ];
+    const feedsPorCategoria = {
+      internacional: [
+        "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+        "https://www.theguardian.com/world/rss",
+        "https://elpais.com/rss/elpais/internacional.xml"
+      ],
+      nacional: [
+        "https://elpais.com/rss/elpais/espana.xml",
+        "https://feeds.elconfidencial.com/espana/rss.xml"
+      ],
+      europa: [
+        "https://www.dw.com/es/europa/rss-feeds/s-100838",
+        "https://elpais.com/rss/elpais/internacional.xml"
+      ],
+      deportes: [
+        "https://as.com/rss/futbol.xml",
+        "https://feeds.elconfidencial.com/deportes/rss.xml"
+      ],
+      cultura: [
+        "https://feeds.elconfidencial.com/cultura/rss.xml",
+        "https://elpais.com/rss/cultura.xml"
+      ],
+      tecnologia: [
+        "https://feeds.elconfidencial.com/tecnologia/rss.xml",
+        "https://www.genbeta.com/tag/rss.xml"
+      ],
+      ciencia: [
+        "https://www.agenciasinc.es/rss/Noticias",
+        "https://feeds.elconfidencial.com/alma-corazon-vida/ciencia/rss.xml"
+      ],
+      economia: [
+        "https://feeds.elconfidencial.com/economia/rss.xml",
+        "https://www.eleconomista.es/rss/rss-economia.php"
+      ]
+    };
 
     async function getFeedArticles(feedUrl) {
       try {
@@ -35,11 +79,14 @@
         const parser = new DOMParser();
         const xml = parser.parseFromString(data.contents, "text/xml");
         const items = xml.querySelectorAll("item");
-        return Array.from(items).slice(0, 2).map(item => ({
+        return Array.from(items).slice(0, 5).map(item => ({
           title: item.querySelector("title")?.textContent,
           link: item.querySelector("link")?.textContent,
-          description: item.querySelector("description")?.textContent,
-          image: item.querySelector("media\\:content")?.getAttribute("url") || "https://via.placeholder.com/300x150"
+          description: item.querySelector("description")?.textContent || item.querySelector("content\\:encoded")?.textContent,
+          image:
+            item.querySelector("media\\:content")?.getAttribute("url") ||
+            item.querySelector("enclosure")?.getAttribute("url") ||
+            "https://via.placeholder.com/300x150"
         }));
       } catch (error) {
         console.error("Error al obtener feed:", feedUrl, error);
@@ -55,7 +102,7 @@
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ inputs: `Resumelo brevemente en español: ${text}` })
+          body: JSON.stringify({ inputs: `Resúmelo brevemente en español: ${text}` })
         });
 
         const result = await response.json();
@@ -68,8 +115,11 @@
     }
 
     async function mostrarNoticias() {
+      const categoria = document.getElementById("category").value;
       const container = document.getElementById("news-container");
       container.innerHTML = "<p>Cargando noticias...</p>";
+
+      const feeds = feedsPorCategoria[categoria] || [];
 
       let allArticles = [];
       for (const feed of feeds) {
@@ -77,7 +127,7 @@
         allArticles = allArticles.concat(articles);
       }
 
-      const topArticles = allArticles.slice(0, 10);
+      const topArticles = allArticles.slice(0, 12);
 
       const tarjetas = await Promise.all(topArticles.map(async (articulo) => {
         const resumen = articulo.description ? await summarizeText(articulo.description) : "(Sin contenido para resumir)";
@@ -98,6 +148,7 @@
       container.innerHTML = tarjetas.join("");
     }
 
+    document.getElementById("category").addEventListener("change", mostrarNoticias);
     mostrarNoticias();
   </script>
 </body>
