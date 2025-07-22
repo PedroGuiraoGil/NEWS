@@ -79,15 +79,18 @@
         const parser = new DOMParser();
         const xml = parser.parseFromString(data.contents, "text/xml");
         const items = xml.querySelectorAll("item");
-        return Array.from(items).slice(0, 5).map(item => ({
-          title: item.querySelector("title")?.textContent,
-          link: item.querySelector("link")?.textContent,
-          description: item.querySelector("description")?.textContent || item.querySelector("content\\:encoded")?.textContent,
-          image:
-            item.querySelector("media\\:content")?.getAttribute("url") ||
-            item.querySelector("enclosure")?.getAttribute("url") ||
-            "https://via.placeholder.com/300x150"
-        }));
+        return Array.from(items).slice(0, 5).map(item => {
+          const content = item.querySelector("content\\:encoded")?.textContent || item.querySelector("description")?.textContent || "";
+          const imgMatch = content.match(/<img[^>]+src\s*=\s*['"]([^'"]+)['"]/);
+          return {
+            title: item.querySelector("title")?.textContent,
+            link: item.querySelector("link")?.textContent,
+            description: content.replace(/<[^>]+>/g, '').substring(0, 1000),
+            image: item.querySelector("media\\:content")?.getAttribute("url") ||
+                   item.querySelector("enclosure")?.getAttribute("url") ||
+                   (imgMatch ? imgMatch[1] : "https://via.placeholder.com/300x150")
+          };
+        });
       } catch (error) {
         console.error("Error al obtener feed:", feedUrl, error);
         return [];
@@ -127,7 +130,7 @@
         allArticles = allArticles.concat(articles);
       }
 
-      const topArticles = allArticles.slice(0, 12);
+      const topArticles = allArticles.slice(0, 15);
 
       const tarjetas = await Promise.all(topArticles.map(async (articulo) => {
         const resumen = articulo.description ? await summarizeText(articulo.description) : "(Sin contenido para resumir)";
