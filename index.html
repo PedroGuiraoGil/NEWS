@@ -1,100 +1,95 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Resumen de Noticias con IA</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resumen de Noticias con IA (Mistral)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
-    header { background: #111; color: white; padding: 1em; text-align: center; }
-    .noticias { display: flex; flex-wrap: wrap; padding: 1em; gap: 1em; justify-content: center; }
-    .card {
-      background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      max-width: 300px; overflow: hidden; display: flex; flex-direction: column;
-    }
-    .card img { width: 100%; height: 160px; object-fit: cover; }
-    .card-content { padding: 1em; display: flex; flex-direction: column; gap: 0.5em; }
-    .card-content h3 { margin: 0; font-size: 1.1em; }
-    .card-content p { margin: 0; color: #444; font-size: 0.9em; }
-    .card-content a { margin-top: auto; text-decoration: none; color: #0066cc; }
+    body { background-color: #f1f1f1; }
+    .header { background-color: #111; color: white; padding: 1rem; text-align: center; font-size: 1.5rem; font-weight: bold; }
+    .card { margin: 1rem; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Resumen de Noticias con IA (Mistral)</h1>
-  </header>
-  <section class="noticias" id="noticias"></section>
+  <div class="header">Resumen de Noticias con IA (Mistral)</div>
+  <div class="container">
+    <div id="news-container" class="row justify-content-center"></div>
+  </div>
+
   <script>
-    const fuentesRSS = [
-      "https://feeds.bbci.co.uk/mundo/rss.xml",
-      "https://www.agenciasinc.es/feed/rss",
-      "https://www.xataka.com/feed",
-      "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/politica/portada"
+    const token = "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";
+    const mistralModel = "mistralai/Mistral-7B-Instruct-v0.2";
+
+    const feeds = [
+      "https://feeds.bbci.co.uk/news/world/rss.xml",
+      "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+      "https://www.theguardian.com/world/rss",
+      "https://elpais.com/rss/elpais/internacional.xml",
+      "https://www.reutersagency.com/feed/?best-topics=world&post_type=best"
     ];
 
-    const huggingFaceToken = "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";
-
-    async function cargarNoticias() {
-      const contenedor = document.getElementById("noticias");
-      for (const url of fuentesRSS) {
-        try {
-          const proxy = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
-          const res = await fetch(proxy);
-          const data = await res.json();
-          const items = data.items;
-
-          for (let i = 0; i < Math.min(3, items.length); i++) {
-            const item = items[i];
-            const titulo = item.title;
-            const link = item.link;
-            const descripcion = item.description || item.content || "";
-            const imagen = item.thumbnail || "https://via.placeholder.com/300x160";
-
-            const resumen = await resumirNoticia(descripcion);
-
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <img src="${imagen}" alt="Imagen"/>
-              <div class="card-content">
-                <h3>${titulo}</h3>
-                <p>${resumen}</p>
-                <a href="${link}" target="_blank">Leer más</a>
-              </div>
-            `;
-            contenedor.appendChild(card);
-          }
-        } catch (error) {
-          console.error("Error cargando RSS:", url, error);
-        }
-      }
+    async function getFeedArticles(feedUrl) {
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`);
+      const data = await response.json();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(data.contents, "text/xml");
+      const items = xml.querySelectorAll("item");
+      return Array.from(items).slice(0, 2).map(item => ({
+        title: item.querySelector("title")?.textContent,
+        link: item.querySelector("link")?.textContent,
+        description: item.querySelector("description")?.textContent,
+        image: item.querySelector("media\\:content")?.getAttribute("url") || "https://via.placeholder.com/300x150"
+      }));
     }
 
-    async function resumirNoticia(texto) {
-      const payload = {
-        inputs: `Resume en 3 frases esta noticia: ${texto}`
-      };
+    async function summarizeText(text) {
       try {
-        const response = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1", {
+        const response = await fetch("https://api-inference.huggingface.co/models/" + mistralModel, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${huggingFaceToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ inputs: `Resumelo brevemente en español: ${text}` })
         });
-        const json = await response.json();
-        if (json && json[0]?.generated_text) {
-          return json[0].generated_text;
-        } else {
-          return "(No se pudo resumir)";
-        }
-      } catch (e) {
-        return "(Error al conectar con HuggingFace)";
+
+        const result = await response.json();
+        if (Array.isArray(result)) return result[0]?.generated_text || "(No se pudo resumir)";
+        if (result?.error) return `(Error: ${result.error})`;
+        return "(No se pudo resumir)";
+      } catch (err) {
+        return `(Error de conexión)`;
       }
     }
 
-    cargarNoticias();
+    async function mostrarNoticias() {
+      const container = document.getElementById("news-container");
+      container.innerHTML = "<p>Cargando noticias...</p>";
+
+      const allArticles = (await Promise.all(feeds.map(getFeedArticles))).flat();
+      const topArticles = allArticles.slice(0, 10);
+
+      const tarjetas = await Promise.all(topArticles.map(async (articulo) => {
+        const resumen = articulo.description ? await summarizeText(articulo.description) : "(Sin contenido para resumir)";
+        return `
+          <div class="col-md-4">
+            <div class="card">
+              <img src="${articulo.image}" class="card-img-top" alt="Imagen de noticia">
+              <div class="card-body">
+                <h5 class="card-title">${articulo.title}</h5>
+                <p class="card-text">${resumen}</p>
+                <a href="${articulo.link}" target="_blank" class="btn btn-primary">Leer más</a>
+              </div>
+            </div>
+          </div>
+        `;
+      }));
+
+      container.innerHTML = tarjetas.join("");
+    }
+
+    mostrarNoticias();
   </script>
 </body>
 </html>
