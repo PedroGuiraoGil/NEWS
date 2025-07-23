@@ -35,60 +35,66 @@
     const token = "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";
     const mistralModel = "mistralai/Mistral-7B-Instruct-v0.2";
 
+    const proxy = "https://api.codetabs.com/v1/proxy?quest=";
+
     const feedsPorCategoria = {
       internacional: [
-        "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-        "https://feeds.bbci.co.uk/news/world/rss.xml",
-        "https://www.theguardian.com/world/rss",
-        "https://elpais.com/rss/elpais/internacional.xml"
+        proxy + "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+        proxy + "https://feeds.bbci.co.uk/news/world/rss.xml",
+        proxy + "https://www.theguardian.com/world/rss",
+        proxy + "https://elpais.com/rss/elpais/internacional.xml"
       ],
       nacional: [
-        "https://elpais.com/rss/elpais/espana.xml",
-        "https://feeds.elconfidencial.com/espana/rss.xml"
+        proxy + "https://elpais.com/rss/elpais/espana.xml",
+        proxy + "https://feeds.elconfidencial.com/espana/rss.xml"
       ],
       europa: [
-        "https://feeds.elconfidencial.com/mundo/rss.xml",
-        "https://elpais.com/rss/elpais/internacional.xml"
+        proxy + "https://feeds.elconfidencial.com/mundo/rss.xml",
+        proxy + "https://elpais.com/rss/elpais/internacional.xml"
       ],
       deportes: [
-        "https://as.com/rss/futbol.xml",
-        "https://feeds.elconfidencial.com/deportes/rss.xml"
+        proxy + "https://as.com/rss/futbol.xml",
+        proxy + "https://feeds.elconfidencial.com/deportes/rss.xml"
       ],
       cultura: [
-        "https://feeds.elconfidencial.com/cultura/rss.xml",
-        "https://elpais.com/rss/cultura.xml"
+        proxy + "https://feeds.elconfidencial.com/cultura/rss.xml",
+        proxy + "https://elpais.com/rss/cultura.xml"
       ],
       tecnologia: [
-        "https://feeds.elconfidencial.com/tecnologia/rss.xml",
-        "https://www.genbeta.com/tag/rss.xml"
+        proxy + "https://feeds.elconfidencial.com/tecnologia/rss.xml",
+        proxy + "https://www.genbeta.com/tag/rss.xml"
       ],
       ciencia: [
-        "https://www.agenciasinc.es/rss/Noticias",
-        "https://feeds.elconfidencial.com/alma-corazon-vida/ciencia/rss.xml"
+        proxy + "https://www.agenciasinc.es/rss/Noticias",
+        proxy + "https://feeds.elconfidencial.com/alma-corazon-vida/ciencia/rss.xml"
       ],
       economia: [
-        "https://feeds.elconfidencial.com/economia/rss.xml",
-        "https://www.eleconomista.es/rss/rss-economia.php"
+        proxy + "https://feeds.elconfidencial.com/economia/rss.xml",
+        proxy + "https://www.eleconomista.es/rss/rss-economia.php"
       ]
     };
 
     async function getFeedArticles(feedUrl) {
       try {
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`);
-        const data = await response.json();
+        const response = await fetch(feedUrl);
+        if (!response.ok) throw new Error("No se pudo obtener el feed");
+
+        const text = await response.text();
         const parser = new DOMParser();
-        const xml = parser.parseFromString(data.contents, "text/xml");
+        const xml = parser.parseFromString(text, "application/xml");
         const items = xml.querySelectorAll("item");
 
         return Array.from(items).map(item => {
-          const content = item.querySelector("content\\:encoded")?.textContent || item.querySelector("description")?.textContent || "";
+          const content = item.querySelector("encoded")?.textContent || item.querySelector("description")?.textContent || "";
           const imgMatch = content.match(/<img[^>]+src\s*=\s*['"]([^'"]+)['"]/);
-          const image = imgMatch ? imgMatch[1] : "https://via.placeholder.com/300x150";
+          const enclosureUrl = item.querySelector("enclosure")?.getAttribute("url");
+          const mediaContentUrl = item.querySelector("media\\:content")?.getAttribute("url");
+          const image = imgMatch?.[1] || mediaContentUrl || enclosureUrl || "https://via.placeholder.com/300x150";
 
           return {
             title: item.querySelector("title")?.textContent || "(Sin título)",
             link: item.querySelector("link")?.textContent || "#",
-            description: content.replace(/<[^>]+>/g, '').substring(0, 1500),
+            description: content.replace(/<[^>]+>/g, '').substring(0, 1000),
             image
           };
         });
@@ -143,7 +149,7 @@
         return `
           <div class="col-md-4">
             <div class="card">
-              <img src="${articulo.image}" class="card-img-top" alt="Imagen de noticia">
+              <img src="${articulo.image}" class="card-img-top" alt="Imagen de noticia" onerror="this.src='https://via.placeholder.com/300x150'">
               <div class="card-body">
                 <h5 class="card-title">${articulo.title}</h5>
                 <p class="card-text">${resumen}</p>
