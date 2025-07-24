@@ -29,7 +29,9 @@
   </div>
 
   <script>
-    const proxy = "https://api.codetabs.com/v1/proxy?quest=";
+    // Nuevo proxy
+    const proxy = "https://api.allorigins.win/raw?url=";
+
     const feedsPorCategoria = {
       internacional: [
         proxy + "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
@@ -56,18 +58,20 @@
         proxy + "https://feeds.feedburner.com/genbeta"
       ],
       ciencia: [
-        proxy + "https://www.nationalgeographic.com.es/rss/ciencia.xml",
-        proxy + "https://www.muyinteresante.es/rss/ciencia"
+        proxy + "https://feeds.feedburner.com/muyinteresante/ciencia",
+        proxy + "https://www.agenciasinc.es/rss/ciencia"
       ],
       economia: [
         proxy + "https://www.eleconomista.es/rss/rss-economia.php",
         proxy + "https://e00-expansion.uecdn.es/rss/economia.xml"
       ],
       salud: [
-        proxy + "https://www.infosalus.com/rss/salud.xml"
+        proxy + "https://www.infosalus.com/rss/salud.xml",
+        proxy + "https://www.muyinteresante.com/rss/salud"
       ],
       medioambiente: [
-        proxy + "https://elpais.com/rss/medio-ambiente.xml"
+        proxy + "https://www.wwf.es/rss/rss.xml",
+        proxy + "https://www.agenciasinc.es/rss/medio-ambiente"
       ],
       opinion: [
         proxy + "https://www.eldiario.es/rss/opinion/"
@@ -77,7 +81,7 @@
       ],
       cienciaficcion: [
         proxy + "https://www.espinof.com/tag/ciencia-ficcion/rss",
-        proxy + "https://feeds.feedburner.com/xataka-ciencia"
+        proxy + "https://www.fantifica.com/feed/"
       ],
       mujer: [
         proxy + "https://www.eldiario.es/rss/feminismo/"
@@ -87,11 +91,11 @@
         proxy + "https://vertele.eldiario.es/rss/"
       ],
       curiosidades: [
-        proxy + "https://www.muyinteresante.es/rss/curiosidades"
+        proxy + "https://feeds.feedburner.com/muyinteresante/curiosidades"
       ],
       viajes: [
-        proxy + "https://feeds.nationalgeographic.com.es/rss/viajes.xml",
-        proxy + "https://www.traveler.es/rss"
+        proxy + "https://www.traveler.es/rss",
+        proxy + "https://www.hosteltur.com/rss/noticias"
       ]
     };
 
@@ -133,7 +137,7 @@
             noticias.push({ title, link, description, pubDate, image });
           });
         } catch (err) {
-          console.error("Error al obtener feed:", url);
+          console.error("Error al obtener feed:", url, err);
         }
       }
 
@@ -157,5 +161,4 @@
     }
   </script>
 </body>
-
 </html>
