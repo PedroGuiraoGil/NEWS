@@ -14,24 +14,29 @@
     .categoria-btn {
       margin: 5px;
     }
+
+    .card-img-top {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
   </style>
 </head>
 
 <body>
   <div class="container py-4">
-    <h1 class="mb-4 text-center">Noticias resumidas</h1>
+    <h1 class="mb-4 text-center">Noticias resumidas 📰</h1>
     <div class="d-flex flex-wrap justify-content-center" id="categorias">
-      <!-- Botones de categorías -->
-    </div>
+      </div>
     <div class="row mt-4" id="noticias">
-      <!-- Noticias cargadas -->
-    </div>
+      </div>
   </div>
 
   <script>
-    // Nuevo proxy
+    // Usamos el mismo proxy
     const proxy = "https://api.allorigins.win/raw?url=";
 
+    // Lista de feeds. Se han actualizado los que no funcionaban.
     const feedsPorCategoria = {
       internacional: [
         proxy + "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
@@ -58,8 +63,8 @@
         proxy + "https://feeds.feedburner.com/genbeta"
       ],
       ciencia: [
-        proxy + "https://feeds.feedburner.com/muyinteresante/ciencia",
-        proxy + "https://www.agenciasinc.es/rss/ciencia"
+        proxy + "https://www.agenciasinc.es/rss", // URL principal de SINC
+        proxy + "https://feeds.feedburner.com/muyinteresante/ciencia"
       ],
       economia: [
         proxy + "https://www.eleconomista.es/rss/rss-economia.php",
@@ -67,11 +72,11 @@
       ],
       salud: [
         proxy + "https://www.infosalus.com/rss/salud.xml",
-        proxy + "https://www.muyinteresante.com/rss/salud"
+        proxy + "https://www.muyinteresante.es/salud/rss" // Corregido
       ],
       medioambiente: [
         proxy + "https://www.wwf.es/rss/rss.xml",
-        proxy + "https://www.agenciasinc.es/rss/medio-ambiente"
+        proxy + "https://www.agenciasinc.es/rss/Medio-Ambiente"
       ],
       opinion: [
         proxy + "https://www.eldiario.es/rss/opinion/"
@@ -79,28 +84,50 @@
       educacion: [
         proxy + "https://www.europapress.es/rss/rss.aspx?ch=33"
       ],
-      cienciaficcion: [
-        proxy + "https://www.espinof.com/tag/ciencia-ficcion/rss",
-        proxy + "https://www.fantifica.com/feed/"
-      ],
+      // ✅ Feed de "Mujer" corregido
       mujer: [
-        proxy + "https://www.eldiario.es/rss/feminismo/"
+        proxy + "https://www.publico.es/rss/tag/mujeres",
+        proxy + "https://www.eldiario.es/rss/igualdad/"
       ],
       culturapop: [
         proxy + "https://www.espinof.com/feed/rss",
         proxy + "https://vertele.eldiario.es/rss/"
       ],
-      curiosidades: [
-        proxy + "https://feeds.feedburner.com/muyinteresante/curiosidades"
-      ],
+      // ✅ Feed de "Viajes" corregido
       viajes: [
-        proxy + "https://www.traveler.es/rss",
+        proxy + "https://elviajero.elpais.com/rss/elviajero/portada.xml",
         proxy + "https://www.hosteltur.com/rss/noticias"
       ]
     };
 
     const categoriasContainer = document.getElementById("categorias");
     const noticiasContainer = document.getElementById("noticias");
+
+    // Función mejorada para obtener la imagen de la noticia
+    function obtenerImagen(item) {
+      // 1. Prioridad: Etiqueta "media:content" (común en feeds modernos como NYT)
+      const mediaContent = item.querySelector("media\\:content");
+      if (mediaContent) return mediaContent.getAttribute("url");
+
+      // 2. Etiqueta "enclosure" (muy común para imágenes y podcasts)
+      const enclosure = item.querySelector("enclosure");
+      if (enclosure && enclosure.getAttribute("type").startsWith("image")) {
+        return enclosure.getAttribute("url");
+      }
+
+      // 3. Etiqueta "media:thumbnail" (usada por la BBC)
+      const mediaThumbnail = item.querySelector("media\\:thumbnail");
+      if (mediaThumbnail) return mediaThumbnail.getAttribute("url");
+
+      // 4. Buscar una imagen dentro de la descripción
+      const description = item.querySelector("description")?.textContent || "";
+      const imgMatch = description.match(/<img[^>]+src=['"]([^'"]+)['"]/i);
+      if (imgMatch) return imgMatch[1];
+      
+      // 5. Si no se encuentra nada, usar una imagen por defecto
+      return "https://via.placeholder.com/300x200?text=No+Imagen";
+    }
+
 
     Object.keys(feedsPorCategoria).forEach(cat => {
       const btn = document.createElement("button");
@@ -111,54 +138,77 @@
     });
 
     async function cargarNoticias(categoria) {
-      noticiasContainer.innerHTML = "<p class='text-center'>Cargando noticias...</p>";
+      noticiasContainer.innerHTML = `<div class="d-flex justify-content-center align-items-center" style="height: 200px;">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+      </div>`;
       const feeds = feedsPorCategoria[categoria];
       let noticias = [];
 
       for (const url of feeds) {
         try {
           const res = await fetch(url);
+          // Si la respuesta no es OK, salta al siguiente feed
+          if (!res.ok) {
+             console.error("Error en fetch para:", url, res.statusText);
+             continue;
+          }
           const text = await res.text();
           const parser = new DOMParser();
           const xml = parser.parseFromString(text, "text/xml");
+          
+          // Comprobar si hay errores de parseo en el XML
+          if (xml.getElementsByTagName("parsererror").length > 0) {
+              console.error("Error de parseo XML en:", url);
+              continue; // Salta al siguiente feed
+          }
+
           const items = xml.querySelectorAll("item");
 
           items.forEach(item => {
             const title = item.querySelector("title")?.textContent;
             const link = item.querySelector("link")?.textContent;
             const description = item.querySelector("description")?.textContent || "";
-            const pubDate = item.querySelector("pubDate")?.textContent || "";
+            const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
 
-            const imgMatch = description.match(/<img[^>]+src=['"]([^'"]+)['"]/i);
-            const enclosure = item.querySelector("enclosure")?.getAttribute("url") || "";
-            const mediaContent = item.querySelector("media\\:content")?.getAttribute("url") || "";
-            const image = imgMatch?.[1] || mediaContent || enclosure || "https://via.placeholder.com/300x150";
+            // Usamos la nueva función para obtener la mejor imagen disponible
+            const image = obtenerImagen(item);
 
-            noticias.push({ title, link, description, pubDate, image });
+            if (title && link) { // Solo añadir si tiene título y enlace
+                 noticias.push({ title, link, description, pubDate, image });
+            }
           });
         } catch (err) {
-          console.error("Error al obtener feed:", url, err);
+          console.error("Error al procesar feed:", url, err);
         }
       }
 
       if (noticias.length === 0) {
-        noticiasContainer.innerHTML = `<p class="text-center text-danger">No se pudieron cargar las noticias.</p>`;
+        noticiasContainer.innerHTML = `<p class="text-center text-danger">No se pudieron cargar las noticias para esta categoría. Es posible que las fuentes (RSS) no estén disponibles.</p>`;
         return;
       }
+      
+      // Ordenar noticias por fecha de publicación (de más nueva a más vieja)
+      noticias.sort((a, b) => b.pubDate - a.pubDate);
 
       noticiasContainer.innerHTML = noticias.slice(0, 12).map(noticia => `
         <div class="col-md-4 mb-4">
           <div class="card h-100">
-            <img src="${noticia.image}" class="card-img-top" alt="Imagen de noticia" onerror="this.src='https://via.placeholder.com/300x150'">
-            <div class="card-body">
+            <img src="${noticia.image}" class="card-img-top" alt="Imagen de noticia" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x200?text=Error+Img';">
+            <div class="card-body d-flex flex-column">
               <h5 class="card-title">${noticia.title}</h5>
-              <p class="card-text">${noticia.description.replace(/<[^>]*>/g, '').slice(0, 150)}...</p>
-              <a href="${noticia.link}" target="_blank" class="btn btn-primary">Leer más</a>
+              <p class="card-text">${noticia.description.replace(/<[^>]*>/g, '').slice(0, 120)}...</p>
+              <a href="${noticia.link}" target="_blank" class="btn btn-primary mt-auto">Leer más</a>
             </div>
           </div>
         </div>
       `).join("");
     }
+    
+    // Cargar una categoría por defecto al iniciar
+    cargarNoticias('nacional');
+
   </script>
 </body>
 </html>
