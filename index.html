@@ -71,7 +71,6 @@
   <script>
     const proxy = "https://corsproxy.io/?";
 
-    // ✅ Lista de feeds actualizada con la estrategia de redundancia y nuevas fuentes.
     const feedsPorCategoria = {
       internacional: [
         "https://feeds.bbci.co.uk/news/world/rss.xml",
@@ -94,45 +93,40 @@
         "https://www.lavanguardia.com/rss/cultura.xml"
       ],
       tecnologia: [
-        "https://www.xataka.com/feed",
+        "https://hipertextual.com/feed",
         "https://feeds.feedburner.com/Wwwhatsnew"
       ],
-      // ✅ Fuentes de Ciencia actualizadas
       ciencia: [
-        "https://www.elmundo.es/ciencia-y-salud/ciencia.xml",
-        "https://es.gizmodo.com/rss"
+        "https://www.investigacionyciencia.es/rss",
+        "https://www.elconfidencial.com/tecnologia/ciencia/rss"
       ],
       economia: [
         "https://www.eleconomista.es/rss/rss-economia.php",
         "https://www.expansion.com/rss/economia.xml"
       ],
       salud: [
-        "https://www.elmundo.es/rss/salud.xml",
-        "https://www.elmundo.es/rss/salud.xml" 
+        "https://www.sabervivirtv.com/rss",
+        "https://www.hola.com/rss/salud.xml"
       ],
       medioambiente: [
         "https://www.efeverde.com/feed/",
         "https://www.sostenibilidad.com/feed/"
       ],
       opinion: [
-        "https://www.eldiario.es/rss/opinion/",
-        "https://www.eldiario.es/rss/opinion/"
+        "https://www.elconfidencial.com/opinion/feed/",
+        "https://www.abc.es/rss/feeds/abc_Opinion.xml"
       ],
       educacion: [
         "https://www.educaciontrespuntocero.com/feed/",
         "https://www.magisnet.com/feed/"
       ],
       musica: [
-        "https://www.rollingstone.es/feed/",
-        "https://www.mondosonoro.com/feed/"
+        "https://www.mondosonoro.com/feed/",
+        "https://jenesaispop.com/feed/"
       ],
       culturapop: [
         "https://www.hobbyconsolas.com/rss",
         "https://vertele.eldiario.es/rss/"
-      ],
-      viajes: [
-        "https://elviajero.elpais.com/rss/elviajero/portada.xml",
-        "https://www.lonelyplanet.es/rss.xml"
       ]
     };
 
@@ -187,12 +181,12 @@
     });
 
     function mostrarNoticias(noticias) {
-        if (noticias.length === 0) {
+        if (!noticias || noticias.length === 0) {
             noticiasContainer.innerHTML = `<p class="text-center text-danger col-12">No se pudieron cargar noticias para las categorías seleccionadas. Es posible que las fuentes no estén disponibles en este momento.</p>`;
             return;
         }
         noticias.sort((a, b) => b.pubDate - a.pubDate);
-        noticiasContainer.innerHTML = noticias.slice(0, 24).map(noticia => `
+        noticiasContainer.innerHTML = noticias.slice(0, 30).map(noticia => `
             <div class="col-lg-4 col-md-6 mb-4">
               <div class="card h-100 shadow-sm border-0">
                 <img src="${noticia.image}" class="card-img-top" alt="Imagen de la noticia" onerror="this.onerror=null;this.src='https://placehold.co/600x400/e2e8f0/4a5568?text=Error';">
@@ -257,6 +251,7 @@
         return feedNews;
     }
 
+    // ✅ Lógica de carga por lotes para evitar límites de peticiones simultáneas.
     async function loadSelectedCategoriesNews() {
         if (selectedCategories.size === 0) {
             noticiasContainer.innerHTML = '<p class="text-center col-12">Selecciona una o más categorías para ver las noticias.</p>';
@@ -265,22 +260,30 @@
 
         noticiasContainer.innerHTML = `<div class="d-flex justify-content-center align-items-center col-12" style="height: 200px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>`;
         
-        const promises = [];
+        const allUrls = [];
         selectedCategories.forEach(category => {
             feedsPorCategoria[category].forEach(url => {
-                promises.push(fetchNewsFromFeed(url));
+                allUrls.push(url);
             });
         });
 
-        const results = await Promise.allSettled(promises);
-        const allNews = [];
-        results.forEach(result => {
-            if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-                allNews.push(...result.value);
-            } else if (result.status === 'rejected') {
-                console.error("Una promesa de fetch falló:", result.reason);
-            }
-        });
+        const batchSize = 6; // Procesar 6 peticiones a la vez
+        let allNews = [];
+
+        for (let i = 0; i < allUrls.length; i += batchSize) {
+            const batchUrls = allUrls.slice(i, i + batchSize);
+            const promises = batchUrls.map(url => fetchNewsFromFeed(url));
+            
+            const results = await Promise.allSettled(promises);
+            
+            results.forEach(result => {
+                if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+                    allNews.push(...result.value);
+                } else if (result.status === 'rejected') {
+                    console.error("Una promesa de fetch falló:", result.reason);
+                }
+            });
+        }
 
         mostrarNoticias(allNews);
     }
