@@ -9,206 +9,302 @@
   <style>
     body {
       background-color: #f8f9fa;
+      font-family: 'Inter', sans-serif;
     }
 
     .categoria-btn {
       margin: 5px;
+      transition: all 0.2s ease-in-out;
     }
-
+    .categoria-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .card {
+        transition: all 0.2s ease-in-out;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
     .card-img-top {
       width: 100%;
       height: 200px;
       object-fit: cover;
+      border-radius: 0.375rem 0.375rem 0 0;
+    }
+    .card-title {
+        font-weight: 600;
+    }
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+    .form-switch .form-check-input {
+        cursor: pointer;
     }
   </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
   <div class="container py-4">
-    <h1 class="mb-4 text-center">Noticias resumidas 📰</h1>
+    <h1 class="mb-2 text-center fw-bold">Noticias Resumidas 📰</h1>
+    
+    <div class="d-flex justify-content-center align-items-center my-3">
+        <div class="form-check form-switch fs-5">
+            <input class="form-check-input" type="checkbox" role="switch" id="multiModeSwitch">
+            <label class="form-check-label" for="multiModeSwitch">Modo Múltiple</label>
+        </div>
+    </div>
+
     <div class="d-flex flex-wrap justify-content-center" id="categorias">
-      </div>
+      <!-- Los botones de categoría se generarán aquí -->
+    </div>
     <div class="row mt-4" id="noticias">
-      </div>
+      <!-- Las noticias se cargarán aquí -->
+    </div>
   </div>
 
   <script>
-    // Usamos el mismo proxy
-    const proxy = "https://api.allorigins.win/raw?url=";
+    const proxy = "https://corsproxy.io/?";
 
-    // Lista de feeds. Se han actualizado los que no funcionaban.
+    // ✅ Lista de feeds actualizada con la estrategia de redundancia y nuevas fuentes.
     const feedsPorCategoria = {
       internacional: [
-        proxy + "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-        proxy + "https://feeds.bbci.co.uk/news/world/rss.xml"
+        "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
       ],
       nacional: [
-        proxy + "https://www.eldiario.es/rss/espana/",
-        proxy + "https://www.europapress.es/rss/rss.aspx?ch=1"
+        "https://www.elmundo.es/rss/espana.xml",
+        "https://www.abc.es/rss/feeds/abc_EspanaEspana.xml"
       ],
       europa: [
-        proxy + "https://www.euronews.com/rss?level=theme&name=Europe",
-        proxy + "https://feeds.bbci.co.uk/news/world/europe/rss.xml"
+        "https://www.politico.eu/feed/",
+        "https://feeds.bbci.co.uk/news/world/europe/rss.xml"
       ],
       deportes: [
-        proxy + "https://e00-marca.uecdn.es/rss/futbol/primera-division.xml",
-        proxy + "https://e00-marca.uecdn.es/rss/deportes.xml"
+        "https://e00-marca.uecdn.es/rss/futbol/primera-division.xml",
+        "https://www.mundodeportivo.com/feed/rss/futbol"
       ],
       cultura: [
-        proxy + "https://www.eldiario.es/rss/cultura/",
-        proxy + "https://www.lavanguardia.com/rss/cultura.xml"
+        "https://www.elmundo.es/rss/cultura.xml",
+        "https://www.lavanguardia.com/rss/cultura.xml"
       ],
       tecnologia: [
-        proxy + "https://feeds.feedburner.com/xataka2",
-        proxy + "https://feeds.feedburner.com/genbeta"
+        "https://www.xataka.com/feed",
+        "https://feeds.feedburner.com/Wwwhatsnew"
       ],
+      // ✅ Fuentes de Ciencia actualizadas
       ciencia: [
-        proxy + "https://www.agenciasinc.es/rss", // URL principal de SINC
-        proxy + "https://feeds.feedburner.com/muyinteresante/ciencia"
+        "https://www.elmundo.es/ciencia-y-salud/ciencia.xml",
+        "https://es.gizmodo.com/rss"
       ],
       economia: [
-        proxy + "https://www.eleconomista.es/rss/rss-economia.php",
-        proxy + "https://e00-expansion.uecdn.es/rss/economia.xml"
+        "https://www.eleconomista.es/rss/rss-economia.php",
+        "https://www.expansion.com/rss/economia.xml"
       ],
       salud: [
-        proxy + "https://www.infosalus.com/rss/salud.xml",
-        proxy + "https://www.muyinteresante.es/salud/rss" // Corregido
+        "https://www.elmundo.es/rss/salud.xml",
+        "https://www.elmundo.es/rss/salud.xml" 
       ],
       medioambiente: [
-        proxy + "https://www.wwf.es/rss/rss.xml",
-        proxy + "https://www.agenciasinc.es/rss/Medio-Ambiente"
+        "https://www.efeverde.com/feed/",
+        "https://www.sostenibilidad.com/feed/"
       ],
       opinion: [
-        proxy + "https://www.eldiario.es/rss/opinion/"
+        "https://www.eldiario.es/rss/opinion/",
+        "https://www.eldiario.es/rss/opinion/"
       ],
       educacion: [
-        proxy + "https://www.europapress.es/rss/rss.aspx?ch=33"
+        "https://www.educaciontrespuntocero.com/feed/",
+        "https://www.magisnet.com/feed/"
       ],
-      // ✅ Feed de "Mujer" corregido
-      mujer: [
-        proxy + "https://www.publico.es/rss/tag/mujeres",
-        proxy + "https://www.eldiario.es/rss/igualdad/"
+      musica: [
+        "https://www.rollingstone.es/feed/",
+        "https://www.mondosonoro.com/feed/"
       ],
       culturapop: [
-        proxy + "https://www.espinof.com/feed/rss",
-        proxy + "https://vertele.eldiario.es/rss/"
+        "https://www.hobbyconsolas.com/rss",
+        "https://vertele.eldiario.es/rss/"
       ],
-      // ✅ Feed de "Viajes" corregido
       viajes: [
-        proxy + "https://elviajero.elpais.com/rss/elviajero/portada.xml",
-        proxy + "https://www.hosteltur.com/rss/noticias"
+        "https://elviajero.elpais.com/rss/elviajero/portada.xml",
+        "https://www.lonelyplanet.es/rss.xml"
       ]
     };
 
     const categoriasContainer = document.getElementById("categorias");
     const noticiasContainer = document.getElementById("noticias");
+    const multiModeSwitch = document.getElementById("multiModeSwitch");
 
-    // Función mejorada para obtener la imagen de la noticia
+    let isMultiCategoryMode = false;
+    let selectedCategories = new Set();
+
     function obtenerImagen(item) {
-      // 1. Prioridad: Etiqueta "media:content" (común en feeds modernos como NYT)
-      const mediaContent = item.querySelector("media\\:content");
-      if (mediaContent) return mediaContent.getAttribute("url");
-
-      // 2. Etiqueta "enclosure" (muy común para imágenes y podcasts)
-      const enclosure = item.querySelector("enclosure");
-      if (enclosure && enclosure.getAttribute("type").startsWith("image")) {
-        return enclosure.getAttribute("url");
-      }
-
-      // 3. Etiqueta "media:thumbnail" (usada por la BBC)
-      const mediaThumbnail = item.querySelector("media\\:thumbnail");
-      if (mediaThumbnail) return mediaThumbnail.getAttribute("url");
-
-      // 4. Buscar una imagen dentro de la descripción
-      const description = item.querySelector("description")?.textContent || "";
-      const imgMatch = description.match(/<img[^>]+src=['"]([^'"]+)['"]/i);
-      if (imgMatch) return imgMatch[1];
-      
-      // 5. Si no se encuentra nada, usar una imagen por defecto
-      return "https://via.placeholder.com/300x200?text=No+Imagen";
+        const descriptionText = item.querySelector("description")?.textContent || "";
+        const mediaContent = item.querySelector("media\\:content");
+        if (mediaContent && mediaContent.getAttribute("url")) return mediaContent.getAttribute("url");
+        const mediaThumbnail = item.querySelector("media\\:thumbnail");
+        if (mediaThumbnail && mediaThumbnail.getAttribute("url")) return mediaThumbnail.getAttribute("url");
+        const enclosure = item.querySelector("enclosure");
+        if (enclosure && enclosure.getAttribute("type")?.startsWith("image")) return enclosure.getAttribute("url");
+        const imgMatch = descriptionText.match(/<img[^>]+src=['"]([^'"]+)['"]/i);
+        if (imgMatch && imgMatch[1]) return imgMatch[1];
+        const itunesImage = item.querySelector("itunes\\:image");
+        if (itunesImage && itunesImage.getAttribute("href")) return itunesImage.getAttribute("href");
+        return "https://placehold.co/600x400/e2e8f0/4a5568?text=No+Imagen";
     }
 
+    function updateCategoryButtonsUI() {
+        document.querySelectorAll('.categoria-btn').forEach(btn => {
+            const category = btn.dataset.category;
+            btn.classList.toggle('btn-primary', selectedCategories.has(category));
+            btn.classList.toggle('btn-outline-primary', !selectedCategories.has(category));
+        });
+    }
+    
+    function handleCategoryClick(category) {
+        if (isMultiCategoryMode) {
+            selectedCategories.has(category) ? selectedCategories.delete(category) : selectedCategories.add(category);
+        } else {
+            selectedCategories.clear();
+            selectedCategories.add(category);
+        }
+        updateCategoryButtonsUI();
+        loadSelectedCategoriesNews();
+    }
 
     Object.keys(feedsPorCategoria).forEach(cat => {
       const btn = document.createElement("button");
       btn.className = "btn btn-outline-primary categoria-btn";
       btn.innerText = cat.charAt(0).toUpperCase() + cat.slice(1);
-      btn.onclick = () => cargarNoticias(cat);
+      btn.dataset.category = cat;
+      btn.onclick = () => handleCategoryClick(cat);
       categoriasContainer.appendChild(btn);
     });
 
-    async function cargarNoticias(categoria) {
-      noticiasContainer.innerHTML = `<div class="d-flex justify-content-center align-items-center" style="height: 200px;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Cargando...</span>
-        </div>
-      </div>`;
-      const feeds = feedsPorCategoria[categoria];
-      let noticias = [];
-
-      for (const url of feeds) {
-        try {
-          const res = await fetch(url);
-          // Si la respuesta no es OK, salta al siguiente feed
-          if (!res.ok) {
-             console.error("Error en fetch para:", url, res.statusText);
-             continue;
-          }
-          const text = await res.text();
-          const parser = new DOMParser();
-          const xml = parser.parseFromString(text, "text/xml");
-          
-          // Comprobar si hay errores de parseo en el XML
-          if (xml.getElementsByTagName("parsererror").length > 0) {
-              console.error("Error de parseo XML en:", url);
-              continue; // Salta al siguiente feed
-          }
-
-          const items = xml.querySelectorAll("item");
-
-          items.forEach(item => {
-            const title = item.querySelector("title")?.textContent;
-            const link = item.querySelector("link")?.textContent;
-            const description = item.querySelector("description")?.textContent || "";
-            const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
-
-            // Usamos la nueva función para obtener la mejor imagen disponible
-            const image = obtenerImagen(item);
-
-            if (title && link) { // Solo añadir si tiene título y enlace
-                 noticias.push({ title, link, description, pubDate, image });
-            }
-          });
-        } catch (err) {
-          console.error("Error al procesar feed:", url, err);
+    function mostrarNoticias(noticias) {
+        if (noticias.length === 0) {
+            noticiasContainer.innerHTML = `<p class="text-center text-danger col-12">No se pudieron cargar noticias para las categorías seleccionadas. Es posible que las fuentes no estén disponibles en este momento.</p>`;
+            return;
         }
-      }
-
-      if (noticias.length === 0) {
-        noticiasContainer.innerHTML = `<p class="text-center text-danger">No se pudieron cargar las noticias para esta categoría. Es posible que las fuentes (RSS) no estén disponibles.</p>`;
-        return;
-      }
-      
-      // Ordenar noticias por fecha de publicación (de más nueva a más vieja)
-      noticias.sort((a, b) => b.pubDate - a.pubDate);
-
-      noticiasContainer.innerHTML = noticias.slice(0, 12).map(noticia => `
-        <div class="col-md-4 mb-4">
-          <div class="card h-100">
-            <img src="${noticia.image}" class="card-img-top" alt="Imagen de noticia" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x200?text=Error+Img';">
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">${noticia.title}</h5>
-              <p class="card-text">${noticia.description.replace(/<[^>]*>/g, '').slice(0, 120)}...</p>
-              <a href="${noticia.link}" target="_blank" class="btn btn-primary mt-auto">Leer más</a>
+        noticias.sort((a, b) => b.pubDate - a.pubDate);
+        noticiasContainer.innerHTML = noticias.slice(0, 24).map(noticia => `
+            <div class="col-lg-4 col-md-6 mb-4">
+              <div class="card h-100 shadow-sm border-0">
+                <img src="${noticia.image}" class="card-img-top" alt="Imagen de la noticia" onerror="this.onerror=null;this.src='https://placehold.co/600x400/e2e8f0/4a5568?text=Error';">
+                <div class="card-body d-flex flex-column">
+                  <h5 class="card-title">${noticia.title}</h5>
+                  <p class="card-text text-muted small">${noticia.description.replace(/<[^>]*>/g, '').slice(0, 120)}...</p>
+                  <a href="${noticia.link}" target="_blank" rel="noopener noreferrer" class="btn btn-primary mt-auto align-self-start">Leer más</a>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      `).join("");
+        `).join("");
     }
     
-    // Cargar una categoría por defecto al iniciar
-    cargarNoticias('nacional');
+    async function fetchNewsFromFeed(url) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+        let feedNews = [];
+        try {
+            const res = await fetch(proxy + url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+                console.error("Error en fetch para:", url, res.status, res.statusText);
+                return feedNews;
+            }
+            const text = await res.text();
+            
+            if (!text) {
+                console.error("El proxy no devolvió contenido para:", url);
+                return feedNews;
+            }
+
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(text, "text/xml");
+            
+            if (xml.getElementsByTagName("parsererror").length > 0) {
+                console.error("Error de parseo XML en:", url);
+                return feedNews;
+            }
+
+            const items = xml.querySelectorAll("item");
+            items.forEach(item => {
+                const title = item.querySelector("title")?.textContent;
+                const link = item.querySelector("link")?.textContent;
+                const description = item.querySelector("description")?.textContent || "";
+                const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
+                const image = obtenerImagen(item);
+
+                if (title && link) {
+                    feedNews.push({ title, link, description, pubDate, image });
+                }
+            });
+        } catch (err) {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') {
+                console.error('Timeout alcanzado para:', url);
+            } else {
+                console.error("Error al procesar feed:", url, err);
+            }
+        }
+        return feedNews;
+    }
+
+    async function loadSelectedCategoriesNews() {
+        if (selectedCategories.size === 0) {
+            noticiasContainer.innerHTML = '<p class="text-center col-12">Selecciona una o más categorías para ver las noticias.</p>';
+            return;
+        }
+
+        noticiasContainer.innerHTML = `<div class="d-flex justify-content-center align-items-center col-12" style="height: 200px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>`;
+        
+        const promises = [];
+        selectedCategories.forEach(category => {
+            feedsPorCategoria[category].forEach(url => {
+                promises.push(fetchNewsFromFeed(url));
+            });
+        });
+
+        const results = await Promise.allSettled(promises);
+        const allNews = [];
+        results.forEach(result => {
+            if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+                allNews.push(...result.value);
+            } else if (result.status === 'rejected') {
+                console.error("Una promesa de fetch falló:", result.reason);
+            }
+        });
+
+        mostrarNoticias(allNews);
+    }
+
+    multiModeSwitch.addEventListener('change', (event) => {
+        isMultiCategoryMode = event.target.checked;
+        if (!isMultiCategoryMode) {
+            const lastCategory = Array.from(selectedCategories).pop();
+            selectedCategories.clear();
+            if (lastCategory) {
+                selectedCategories.add(lastCategory);
+            }
+            updateCategoryButtonsUI();
+            if(selectedCategories.size > 0) {
+                loadSelectedCategoriesNews();
+            } else {
+                 noticiasContainer.innerHTML = '<p class="text-center col-12">Selecciona una categoría para ver las noticias.</p>';
+            }
+        }
+    });
+
+    window.onload = () => {
+        handleCategoryClick('nacional');
+    };
   </script>
 </body>
 </html>
